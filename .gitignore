@@ -1,0 +1,33 @@
+# Entorno
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos temporales del bot
+*.ogg
+*.mp3
+*.wav
+*.jpg
+*.png
+/tmp/
+
+# Reportes generados
+*.pdf
+
+# IDEs
+.vscode/settings.json
+.idea/
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build
+dist/
+build/
+*.egg-info/
