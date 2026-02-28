@@ -6,7 +6,9 @@ Registra todos los handlers en el orden correcto.
 """
 
 import logging
-from telegram.ext import Application
+import traceback
+from telegram import Update
+from telegram.ext import Application, ContextTypes
 
 from config import TELEGRAM_BOT_TOKEN
 from bot.handlers.start import start_handler, help_handler
@@ -23,6 +25,15 @@ from bot.handlers.report import report_handler
 from bot.handlers.callbacks import generic_callback_handler
 
 logger = logging.getLogger(__name__)
+
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Captura cualquier excepción no manejada y responde al usuario sin caerse."""
+    logger.error("Excepción no manejada:", exc_info=context.error)
+    if isinstance(update, Update) and update.effective_message:
+        await update.effective_message.reply_text(
+            "⚠️ Ocurrió un error inesperado. Por favor intentá de nuevo."
+        )
 
 
 def create_app() -> Application:
@@ -62,6 +73,9 @@ def create_app() -> Application:
 
     # ── Texto libre (NLP) — siempre al final ─────────────
     app.add_handler(message_handler)
+
+    # ── Error handler global ──────────────────────────────
+    app.add_error_handler(error_handler)
 
     logger.info("✅ Bot configurado con %d handlers", len(app.handlers))
     return app

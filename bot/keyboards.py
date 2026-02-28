@@ -21,7 +21,7 @@ def main_menu() -> ReplyKeyboardMarkup:
         ["📋 Historial",   "🔁 Recurrentes"],
         ["📄 Reporte PDF", "❓ Ayuda"],
     ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
 # ─────────────────────────────────────────────

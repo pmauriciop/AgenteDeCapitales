@@ -6,6 +6,8 @@ Flujo: monto → categoría → descripción → guardar
 """
 
 from datetime import date
+import warnings
+warnings.filterwarnings("ignore", message=".*per_message.*", category=UserWarning)
 from telegram import Update
 from telegram.ext import (
     ContextTypes,
@@ -117,5 +119,4 @@ income_conversation = ConversationHandler(
         INCOME_DESCRIPTION: [MessageHandler(filters.TEXT, get_income_description)],
     },
     fallbacks=[CommandHandler("cancelar", cancel_income)],
-    per_message=False,
 )

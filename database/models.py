@@ -64,6 +64,9 @@ class Transaction:
     date: date
     id: Optional[str] = None
     created_at: Optional[datetime] = None
+    installment_current: Optional[int] = None   # cuota actual  (ej. 3)
+    installment_total: Optional[int] = None     # total cuotas  (ej. 6)
+    installments_remaining: Optional[int] = None  # cuotas restantes (ej. 3)
 
     @classmethod
     def from_dict(cls, data: dict) -> "Transaction":
@@ -80,10 +83,13 @@ class Transaction:
             type=data["type"],
             date=parsed_date,
             created_at=data.get("created_at"),
+            installment_current=data.get("installment_current"),
+            installment_total=data.get("installment_total"),
+            installments_remaining=data.get("installments_remaining"),
         )
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "user_id": self.user_id,
             "amount": self.amount,
             "category": self.category,
@@ -91,6 +97,13 @@ class Transaction:
             "type": self.type,
             "date": self.date.isoformat(),
         }
+        if self.installment_current is not None:
+            d["installment_current"] = self.installment_current
+        if self.installment_total is not None:
+            d["installment_total"] = self.installment_total
+        if self.installments_remaining is not None:
+            d["installments_remaining"] = self.installments_remaining
+        return d
 
 
 # ─────────────────────────────────────────────

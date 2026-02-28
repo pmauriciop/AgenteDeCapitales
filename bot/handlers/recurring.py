@@ -7,6 +7,8 @@ ConversationHandler para gestión de transacciones recurrentes:
 """
 
 from datetime import date
+import warnings
+warnings.filterwarnings("ignore", message=".*per_message.*", category=UserWarning)
 from telegram import Update
 from telegram.ext import (
     ContextTypes,
@@ -166,7 +168,6 @@ recurring_conversation = ConversationHandler(
         RECURRING_FREQUENCY: [CallbackQueryHandler(get_recurring_frequency, pattern=r"^(freq:|cancel)")],
     },
     fallbacks=[CommandHandler("cancelar", cancel_recurring)],
-    per_message=False,
 )
 
 recurring_callback = CallbackQueryHandler(recurring_callback_handler, pattern=r"^deactivate_rec:")

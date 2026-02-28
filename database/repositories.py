@@ -34,12 +34,12 @@ class UserRepo:
             db.table(cls.TABLE)
             .select("*")
             .eq("telegram_id", telegram_id)
-            .single()
+            .maybe_single()
             .execute()
         )
-        if result.data:
-            return User.from_dict(result.data)
-        return None
+        if result is None or result.data is None:
+            return None
+        return User.from_dict(result.data)
 
     @classmethod
     def create(cls, telegram_id: int, name: str) -> User:
@@ -130,6 +130,41 @@ class TransactionRepo:
             .execute()
         )
         return len(result.data) > 0
+
+    @classmethod
+    def list_last_n_months(cls, user_id: str, n: int = 6) -> list[Transaction]:
+        """Retorna todas las transacciones de los últimos N meses."""
+        from datetime import date
+        from dateutil.relativedelta import relativedelta
+        today = date.today()
+        start = (today - relativedelta(months=n)).replace(day=1)
+        db = get_client()
+        result = (
+            db.table(cls.TABLE)
+            .select("*")
+            .eq("user_id", user_id)
+            .gte("date", start.isoformat())
+            .order("date", desc=False)
+            .execute()
+        )
+        return [Transaction.from_dict(_decrypt_tx(row)) for row in result.data]
+
+    @classmethod
+    def get_monthly_totals(cls, user_id: str, n_months: int = 6) -> list[dict]:
+        """
+        Retorna totales de ingresos y gastos agrupados por mes
+        para los últimos N meses.
+        """
+        txs = cls.list_last_n_months(user_id, n_months)
+        months: dict[str, dict] = {}
+        for tx in txs:
+            key = tx.date.strftime("%Y-%m")
+            if key not in months:
+                months[key] = {"month": key, "income": 0.0, "expense": 0.0}
+            months[key][tx.type] += tx.amount
+        for m in months.values():
+            m["balance"] = m["income"] - m["expense"]
+        return sorted(months.values(), key=lambda x: x["month"])
 
     @classmethod
     def get_summary(cls, user_id: str, month: str) -> dict:

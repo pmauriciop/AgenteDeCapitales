@@ -37,6 +37,9 @@ class TransactionService:
             description=parsed.get("description", ""),
             type=parsed["type"],
             date=date.fromisoformat(parsed["date"]),
+            installment_current=parsed.get("installment_current"),
+            installment_total=parsed.get("installment_total"),
+            installments_remaining=parsed.get("installments_remaining"),
         )
         return TransactionRepo.create(tx)
 

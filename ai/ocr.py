@@ -21,10 +21,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from openai import AsyncOpenAI
-from config import OPENAI_API_KEY, OPENAI_MODEL
+from groq import AsyncGroq
+from config import GROQ_API_KEY
 
-_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+_client = AsyncGroq(api_key=GROQ_API_KEY)
+
+# Modelo de Groq con soporte de visión
+_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 
 def _encode_image(image_path: str | Path) -> str:
@@ -63,7 +66,7 @@ async def extract_text_from_image(image_path: str | Path) -> str:
     mime = _get_mime_type(path)
 
     response = await _client.chat.completions.create(
-        model="gpt-4o",
+        model=_VISION_MODEL,
         messages=[
             {
                 "role": "user",
@@ -76,7 +79,6 @@ async def extract_text_from_image(image_path: str | Path) -> str:
                         "type": "image_url",
                         "image_url": {
                             "url": f"data:{mime};base64,{b64}",
-                            "detail": "high",
                         },
                     },
                 ],
@@ -129,7 +131,7 @@ Categorías disponibles: alimentación, transporte, entretenimiento, salud, educ
 Si la imagen no es un ticket o no se puede determinar el monto, responde exactamente: null"""
 
     response = await _client.chat.completions.create(
-        model="gpt-4o",
+        model=_VISION_MODEL,
         messages=[
             {
                 "role": "user",
@@ -139,7 +141,6 @@ Si la imagen no es un ticket o no se puede determinar el monto, responde exactam
                         "type": "image_url",
                         "image_url": {
                             "url": f"data:{mime};base64,{b64}",
-                            "detail": "high",
                         },
                     },
                 ],

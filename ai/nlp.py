@@ -1,13 +1,9 @@
 """
 ai/nlp.py
 ─────────
-Procesamiento de lenguaje natural con OpenAI.
+Procesamiento de lenguaje natural con Groq (Llama 3.3 70B).
 Extrae transacciones y clasifica intenciones del usuario
 a partir de texto libre (mensajes de Telegram).
-
-Funciones principales:
-    parse_transaction(text) → dict con monto, categoría, tipo, descripción
-    classify_intent(text)   → string con la intención detectada
 """
 
 import json
@@ -15,10 +11,10 @@ import re
 from datetime import date
 from typing import Any
 
-from openai import AsyncOpenAI
-from config import OPENAI_API_KEY, OPENAI_MODEL
+from groq import AsyncGroq
+from config import GROQ_API_KEY, GROQ_MODEL
 
-_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+_client = AsyncGroq(api_key=GROQ_API_KEY)
 
 # ─────────────────────────────────────────────
 #  Categorías disponibles
@@ -106,7 +102,7 @@ Si el mensaje NO describe una transacción, responde exactamente: null
 No incluyas explicaciones ni texto adicional."""
 
     response = await _client.chat.completions.create(
-        model=OPENAI_MODEL,
+        model=GROQ_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text},
@@ -116,13 +112,14 @@ No incluyas explicaciones ni texto adicional."""
     )
 
     raw = response.choices[0].message.content.strip()
+    # Limpiar bloques de código markdown si el modelo los devuelve
+    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
 
     if raw.lower() == "null":
         return None
 
     try:
         data = json.loads(raw)
-        # Validaciones básicas
         data["amount"] = abs(float(data["amount"]))
         if data["type"] not in ("income", "expense"):
             data["type"] = "expense"
@@ -150,7 +147,7 @@ async def classify_intent(text: str) -> str:
 Responde ÚNICAMENTE con el nombre exacto de la intención (sin comillas ni explicación)."""
 
     response = await _client.chat.completions.create(
-        model=OPENAI_MODEL,
+        model=GROQ_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text},
@@ -185,7 +182,7 @@ Sé positivo pero honesto. Máximo 150 palabras."""
     user_message = f"Mi resumen financiero del mes:\n{json.dumps(summary, ensure_ascii=False, indent=2)}"
 
     response = await _client.chat.completions.create(
-        model=OPENAI_MODEL,
+        model=GROQ_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},

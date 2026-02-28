@@ -18,6 +18,7 @@ import tempfile
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, MessageHandler, CallbackQueryHandler, filters
+from telegram.helpers import escape_markdown
 
 from ai.pdf_parser import parse_pdf_transactions, summarize_pdf_statement
 from database.repositories import UserRepo
@@ -54,8 +55,8 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         # Extraer resumen general
         summary_text = await summarize_pdf_statement(tmp_path)
         await update.message.reply_text(
-            f"📋 *Resumen del documento:*\n\n{summary_text}",
-            parse_mode="Markdown",
+            f"📋 *Resumen del documento:*\n\n{escape_markdown(summary_text, version=2)}",
+            parse_mode="MarkdownV2",
         )
 
         # Extraer transacciones
@@ -80,16 +81,25 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         for tx in transactions[:5]:
             emoji = "💰" if tx["type"] == "income" else "💸"
             sign = "+" if tx["type"] == "income" else "-"
+            desc = escape_markdown(tx['description'][:30], version=2)
+            date_str = escape_markdown(str(tx['date']), version=2)
+            amount = escape_markdown(f"{sign}${tx['amount']:,.2f}", version=2)
+            cuota_str = ""
+            if tx.get("installment_total"):
+                rem = tx.get("installments_remaining", "?")
+                cuota_str = escape_markdown(
+                    f" [cuota {tx['installment_current']}/{tx['installment_total']}, restan {rem}]",
+                    version=2,
+                )
             preview_lines.append(
-                f"{emoji} `{tx['date']}` {tx['description'][:30]} — "
-                f"`{sign}${tx['amount']:,.2f}`"
+                f"{emoji} `{date_str}` {desc}{cuota_str} — `{amount}`"
             )
         if count > 5:
-            preview_lines.append(f"_...y {count - 5} más_")
+            preview_lines.append(f"_\\.\\.\\.y {count - 5} más_")
 
-        preview_lines.append(f"\n💸 Total gastos: `${total_expense:,.2f}`")
+        preview_lines.append(f"\n💸 Total gastos: `{escape_markdown(f'${total_expense:,.2f}', version=2)}`")
         if total_income > 0:
-            preview_lines.append(f"💰 Total ingresos: `${total_income:,.2f}`")
+            preview_lines.append(f"💰 Total ingresos: `{escape_markdown(f'${total_income:,.2f}', version=2)}`")
 
         keyboard = InlineKeyboardMarkup([
             [
@@ -103,7 +113,7 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
         await update.message.reply_text(
             "\n".join(preview_lines),
-            parse_mode="Markdown",
+            parse_mode="MarkdownV2",
             reply_markup=keyboard,
         )
 
@@ -152,7 +162,7 @@ async def handle_pdf_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         if errors:
             msg += f"\n• Errores: `{errors}`"
 
-        await query.edit_message_text(msg, parse_mode="Markdown")
+        await query.edit_message_text(msg, parse_mode="MarkdownV2")
 
 
 # ── Handlers exportables ──────────────────────────────────

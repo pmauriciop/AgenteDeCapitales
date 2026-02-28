@@ -15,10 +15,10 @@ import os
 import tempfile
 from pathlib import Path
 
-from openai import AsyncOpenAI
-from config import OPENAI_API_KEY
+from groq import AsyncGroq
+from config import GROQ_API_KEY
 
-_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+_client = AsyncGroq(api_key=GROQ_API_KEY)
 
 SUPPORTED_FORMATS = {".ogg", ".mp3", ".wav", ".m4a", ".webm", ".flac"}
 
@@ -50,7 +50,7 @@ async def transcribe_audio(file_path: str | Path) -> str:
 
     with open(path, "rb") as audio_file:
         response = await _client.audio.transcriptions.create(
-            model="whisper-1",
+            model="whisper-large-v3-turbo",
             file=audio_file,
             language="es",
             response_format="text",

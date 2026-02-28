@@ -10,8 +10,13 @@ Uso:
 
 import logging
 import sys
+import warnings
 from config import LOG_LEVEL, ENV
 from bot.app import create_app
+
+# Suprimir PTBUserWarning de ConversationHandler (comportamiento esperado para
+# handlers mixtos MessageHandler + CallbackQueryHandler)
+warnings.filterwarnings("ignore", category=UserWarning, module="telegram")
 
 
 def setup_logging() -> None:

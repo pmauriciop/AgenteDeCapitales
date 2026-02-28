@@ -16,6 +16,7 @@ from database.repositories import UserRepo, TransactionRepo
 from database.models import Transaction
 from services.transaction_service import TransactionService
 from services.budget_service import BudgetService
+from services.analyst_service import AnalystService
 from bot.keyboards import main_menu, confirm_transaction_keyboard
 
 logger = logging.getLogger(__name__)
@@ -78,15 +79,36 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await _show_help(update, context)
         return
 
+    # ── Analista IA: preguntas sobre los datos del usuario ─
+    is_question = await AnalystService.is_analyst_question(text)
+    if is_question:
+        await _answer_with_analyst(update, context, text)
+        return
+
     # ── Fallback ──────────────────────────────────────────
     await update.message.reply_text(
         "🤔 No entendí tu mensaje. Podés:\n"
-        "• Escribir algo como _\"Gasté $200 en el colectivo\"_\n"
+        "• Escribir algo como \"Gasté $200 en el colectivo\"\n"
+        "• Hacer preguntas como \"¿cuánto gasté este mes?\" o \"proyectá mis gastos\"\n"
         "• Usar los botones del menú\n"
         "• Enviar un mensaje de voz o foto de ticket",
-        parse_mode="Markdown",
         reply_markup=main_menu(),
     )
+
+
+async def _answer_with_analyst(update: Update, context: ContextTypes.DEFAULT_TYPE, question: str) -> None:
+    """Consulta al analista IA con el contexto financiero completo del usuario."""
+    db_user, _ = UserRepo.get_or_create(
+        telegram_id=update.effective_user.id,
+        name=update.effective_user.full_name,
+    )
+    await update.message.chat.send_action("typing")
+    answer = await AnalystService.answer(
+        user_id=db_user.id,
+        user_name=update.effective_user.full_name,
+        question=question,
+    )
+    await update.message.reply_text(answer, reply_markup=main_menu())
 
 
 async def _save_and_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE, parsed: dict) -> None:

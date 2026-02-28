@@ -7,6 +7,8 @@ Handlers para gestión de presupuestos:
 """
 
 from datetime import date
+import warnings
+warnings.filterwarnings("ignore", message=".*per_message.*", category=UserWarning)
 from telegram import Update
 from telegram.ext import (
     ContextTypes,
@@ -118,7 +120,6 @@ budget_conversation = ConversationHandler(
         BUDGET_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_budget_amount)],
     },
     fallbacks=[CommandHandler("cancelar", cancel_budget)],
-    per_message=False,
 )
 
 budget_callback = CallbackQueryHandler(budget_callback_handler, pattern=r"^budget:")

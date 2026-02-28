@@ -6,6 +6,8 @@ Flujo: monto → categoría → descripción → confirmar
 """
 
 from datetime import date
+import warnings
+warnings.filterwarnings("ignore", message=".*per_message.*", category=UserWarning)
 from telegram import Update
 from telegram.ext import (
     ContextTypes,
@@ -117,5 +119,4 @@ expense_conversation = ConversationHandler(
         EXPENSE_DESCRIPTION: [MessageHandler(filters.TEXT, get_expense_description)],
     },
     fallbacks=[CommandHandler("cancelar", cancel_expense)],
-    per_message=False,
 )
