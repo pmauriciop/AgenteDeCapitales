@@ -42,7 +42,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         # Transcribir
         text = await transcribe_audio(tmp_path)
-        logger.info("Transcripción: %s", text)
+        logger.info("Transcripcion recibida (%d caracteres)", len(text))  # no loguear contenido
 
         await update.message.reply_text(f"🎙️ Entendí: _{text}_", parse_mode="Markdown")
 
