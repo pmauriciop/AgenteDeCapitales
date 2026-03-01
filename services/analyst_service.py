@@ -73,9 +73,9 @@ class AnalystService:
         # ── 4. Estado de presupuestos del mes actual ─────
         budget_status_raw = BudgetRepo.get_budget_status(user_id, current_month)
 
-        # ── 5. Transacciones de los últimos 6 meses con detalle ──
-        # (para que el LLM pueda buscar cuotas por descripción, etc.)
-        all_txs_raw = TransactionRepo.list_last_n_months(user_id, n=6)
+        # ── 5. Todas las transacciones con cuotas activas ──
+        # Busca en TODA la historia, no solo 6 meses
+        all_txs_raw = TransactionRepo.list_all(user_id)
         all_transactions = [
             {
                 "date": str(tx.date),
@@ -83,8 +83,17 @@ class AnalystService:
                 "category": tx.category,
                 "description": tx.description,
                 "amount": tx.amount,
+                "installment_current": tx.installment_current,
+                "installment_total": tx.installment_total,
+                "installments_remaining": tx.installments_remaining,
             }
             for tx in all_txs_raw
+        ]
+
+        # Cuotas activas (tienen installment_total y installments_remaining > 0)
+        installments_active = [
+            t for t in all_transactions
+            if t.get("installment_total") and (t.get("installments_remaining") or 0) > 0
         ]
 
         # ── Armar contexto completo ───────────────────────
@@ -94,7 +103,8 @@ class AnalystService:
             "current_month": current_month,
             "monthly_totals_last_6_months": monthly_totals,
             "current_month_transactions": current_month_txs,
-            "all_transactions_last_6_months": all_transactions,
+            "all_transactions": all_transactions,
+            "installments_active": installments_active,
             "recurring_subscriptions": recurring,
             "budget_status": budget_status_raw,
         }

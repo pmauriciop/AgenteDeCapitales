@@ -183,6 +183,19 @@ class TransactionRepo:
         return [Transaction.from_dict(_decrypt_tx(row)) for row in result.data]
 
     @classmethod
+    def list_all(cls, user_id: str) -> list[Transaction]:
+        """Retorna todas las transacciones del usuario sin límite de fecha."""
+        db = get_client()
+        result = (
+            db.table(cls.TABLE)
+            .select("*")
+            .eq("user_id", user_id)
+            .order("date", desc=False)
+            .execute()
+        )
+        return [Transaction.from_dict(_decrypt_tx(row)) for row in result.data]
+
+    @classmethod
     def get_monthly_totals(cls, user_id: str, n_months: int = 6) -> list[dict]:
         """
         Retorna totales de ingresos y gastos agrupados por mes
