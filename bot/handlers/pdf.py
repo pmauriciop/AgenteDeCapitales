@@ -12,20 +12,38 @@ Flujo:
   5. Con un botón, el usuario importa todas o descarta.
 """
 
+import asyncio
 import logging
 import os
 import tempfile
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import RetryAfter
 from telegram.ext import ContextTypes, MessageHandler, CallbackQueryHandler, filters
 from telegram.helpers import escape_markdown
 
-from ai.pdf_parser import parse_pdf_transactions, summarize_pdf_statement
+from ai.pdf_parser import parse_pdf_transactions, summarize_pdf_statement, extract_full_content
 from database.repositories import UserRepo
 from services.transaction_service import TransactionService
 from bot.keyboards import main_menu
 
 logger = logging.getLogger(__name__)
+
+
+async def _send_safe(message, text: str, **kwargs) -> None:
+    """Envía un mensaje respetando el flood control de Telegram (hasta 3 reintentos)."""
+    for attempt in range(3):
+        try:
+            await message.reply_text(text, **kwargs)
+            return
+        except RetryAfter as e:
+            wait = e.retry_after + 2
+            logger.warning("Flood control (intento %d): esperando %ds...", attempt + 1, wait)
+            await asyncio.sleep(wait)
+        except Exception as e:
+            logger.error("Error enviando mensaje (intento %d): %s - %s", attempt + 1, type(e).__name__, e)
+            await asyncio.sleep(2)
+    logger.error("No se pudo enviar el mensaje después de 3 intentos")
 
 
 async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -39,7 +57,8 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     ):
         return
 
-    await update.message.reply_text(
+    await _send_safe(
+        update.message,
         "📄 Analizando el documento PDF… ⏳\n"
         "Esto puede tardar unos segundos."
     )
@@ -49,21 +68,40 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
     try:
         # Descargar PDF
+        logger.info("Descargando PDF...")
         file = await context.bot.get_file(document.file_id)
         await file.download_to_drive(tmp_path)
+        logger.info("PDF descargado en %s", tmp_path)
 
-        # Extraer resumen general
-        summary_text = await summarize_pdf_statement(tmp_path)
-        await update.message.reply_text(
-            f"📋 *Resumen del documento:*\n\n{escape_markdown(summary_text, version=2)}",
-            parse_mode="MarkdownV2",
-        )
+        # Extraer contenido una sola vez (evita doble lectura)
+        content = extract_full_content(tmp_path)
+        logger.info("Contenido extraído, enviando a Groq...")
 
-        # Extraer transacciones
-        transactions = await parse_pdf_transactions(tmp_path)
+        # Resumen y transacciones en paralelo
+        try:
+            summary_text, transactions = await asyncio.gather(
+                summarize_pdf_statement(tmp_path, content=content),
+                parse_pdf_transactions(tmp_path, content=content),
+            )
+        except Exception as groq_err:
+            logger.error("Error en Groq: %s", groq_err, exc_info=True)
+            await _send_safe(
+                update.message,
+                "❌ Error al analizar el PDF con IA. Intentá de nuevo.",
+                reply_markup=main_menu(),
+            )
+            return
+
+        logger.info("Groq respondió: %d transacciones", len(transactions))
+
+        # Enviar resumen en texto plano
+        logger.info("Enviando resumen al usuario...")
+        await _send_safe(update.message, f"📋 Resumen del documento:\n\n{summary_text}")
+        logger.info("Resumen enviado OK")
 
         if not transactions:
-            await update.message.reply_text(
+            await _send_safe(
+                update.message,
                 "🤔 No encontré transacciones en este PDF.\n"
                 "Asegurate de que sea un resumen de tarjeta o extracto bancario.",
                 reply_markup=main_menu(),
@@ -77,92 +115,117 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         total_income = sum(t["amount"] for t in transactions if t["type"] == "income")
 
         # Mostrar preview de las primeras 5
-        preview_lines = [f"💾 *Encontré {count} transacciones:*\n"]
+        preview_lines = [f"Encontre {count} transacciones:\n"]
         for tx in transactions[:5]:
-            emoji = "💰" if tx["type"] == "income" else "💸"
-            sign = "+" if tx["type"] == "income" else "-"
-            desc = escape_markdown(tx['description'][:30], version=2)
-            date_str = escape_markdown(str(tx['date']), version=2)
-            amount = escape_markdown(f"{sign}${tx['amount']:,.2f}", version=2)
+            emoji = "+" if tx["type"] == "income" else "-"
+            desc = tx['description'][:30]
+            date_str = str(tx['date'])
+            amount_str = f"{emoji}${tx['amount']:,.2f}"
             cuota_str = ""
             if tx.get("installment_total"):
                 rem = tx.get("installments_remaining", "?")
-                cuota_str = escape_markdown(
-                    f" [cuota {tx['installment_current']}/{tx['installment_total']}, restan {rem}]",
-                    version=2,
-                )
-            preview_lines.append(
-                f"{emoji} `{date_str}` {desc}{cuota_str} — `{amount}`"
-            )
+                cuota_str = f" [cuota {tx['installment_current']}/{tx['installment_total']}, restan {rem}]"
+            preview_lines.append(f"{date_str}  {desc}{cuota_str}  {amount_str}")
         if count > 5:
-            preview_lines.append(f"_\\.\\.\\.y {count - 5} más_")
+            preview_lines.append(f"...y {count - 5} mas")
 
-        preview_lines.append(f"\n💸 Total gastos: `{escape_markdown(f'${total_expense:,.2f}', version=2)}`")
+        preview_lines.append(f"\nTotal gastos: ${total_expense:,.2f}")
         if total_income > 0:
-            preview_lines.append(f"💰 Total ingresos: `{escape_markdown(f'${total_income:,.2f}', version=2)}`")
+            preview_lines.append(f"Total ingresos: ${total_income:,.2f}")
+
+        preview_text = "\n".join(preview_lines)
+        logger.info("Preview construido (%d chars)", len(preview_text))
 
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(
-                    f"✅ Importar todas ({count})",
+                    f"Importar todas ({count})",
                     callback_data="pdf_import_all",
                 ),
-                InlineKeyboardButton("❌ Cancelar", callback_data="pdf_cancel"),
+                InlineKeyboardButton("Cancelar", callback_data="pdf_cancel"),
             ]
         ])
 
-        await update.message.reply_text(
-            "\n".join(preview_lines),
-            parse_mode="MarkdownV2",
-            reply_markup=keyboard,
-        )
+        logger.info("Enviando preview al usuario...")
+        try:
+            await _send_safe(
+                update.message,
+                preview_text,
+                reply_markup=keyboard,
+            )
+            logger.info("Preview enviado OK")
+        except Exception as preview_err:
+            logger.error("CRASH EN PREVIEW SEND: %s - %s", type(preview_err).__name__, preview_err, exc_info=True)
 
     except Exception as e:
-        logger.error("Error procesando PDF: %s", e)
-        await update.message.reply_text(
-            "❌ Hubo un error al procesar el PDF. Verificá que sea un documento válido.",
-            reply_markup=main_menu(),
-        )
+        logger.error("Error procesando PDF: %s", e, exc_info=True)
+        try:
+            await _send_safe(
+                update.message,
+                "❌ Hubo un error al procesar el PDF. Verificá que sea un documento válido.",
+                reply_markup=main_menu(),
+            )
+        except Exception:
+            pass
     finally:
-        os.unlink(tmp_path)
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
 
 
 async def handle_pdf_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Procesa la confirmación/cancelación de importación del PDF."""
-    query = update.callback_query
-    await query.answer()
+    try:
+        query = update.callback_query
+        logger.info("Callback recibido: %s", query.data)
+        await query.answer()
+        logger.info("query.answer() OK")
 
-    if query.data == "pdf_cancel":
-        context.user_data.pop("pending_pdf_txs", None)
-        await query.edit_message_text("❌ Importación cancelada.")
-        return
-
-    if query.data == "pdf_import_all":
-        transactions = context.user_data.pop("pending_pdf_txs", [])
-        if not transactions:
-            await query.edit_message_text("❌ No hay transacciones pendientes.")
+        if query.data == "pdf_cancel":
+            context.user_data.pop("pending_pdf_txs", None)
+            await query.edit_message_text("Importacion cancelada.")
             return
 
-        db_user, _ = UserRepo.get_or_create(
-            telegram_id=update.effective_user.id,
-            name=update.effective_user.full_name,
-        )
+        if query.data == "pdf_import_all":
+            transactions = context.user_data.pop("pending_pdf_txs", [])
+            logger.info("Transacciones pendientes: %d", len(transactions))
 
-        saved_count = 0
-        errors = 0
-        for tx_data in transactions:
-            try:
-                TransactionService.add_from_parsed(db_user.id, tx_data)
-                saved_count += 1
-            except Exception as e:
-                logger.error("Error guardando TX del PDF: %s", e)
-                errors += 1
+            if not transactions:
+                await query.edit_message_text("No hay transacciones pendientes.")
+                return
 
-        msg = f"✅ *Importación completada*\n\n• Guardadas: `{saved_count}`"
-        if errors:
-            msg += f"\n• Errores: `{errors}`"
+            logger.info("Obteniendo usuario de DB...")
+            db_user, _ = UserRepo.get_or_create(
+                telegram_id=update.effective_user.id,
+                name=update.effective_user.full_name,
+            )
+            logger.info("Usuario OK: %s", db_user.id)
 
-        await query.edit_message_text(msg, parse_mode="MarkdownV2")
+            saved_count = 0
+            errors = 0
+            for tx_data in transactions:
+                try:
+                    TransactionService.add_from_parsed(db_user.id, tx_data)
+                    saved_count += 1
+                except Exception as e:
+                    logger.error("Error guardando TX del PDF: %s - %s", type(e).__name__, e, exc_info=True)
+                    errors += 1
+
+            logger.info("Guardado: %d OK, %d errores", saved_count, errors)
+            msg = f"Importacion completada\n\nGuardadas: {saved_count}"
+            if errors:
+                msg += f"\nErrores: {errors}"
+
+            await query.edit_message_text(msg)
+            logger.info("Callback completado OK")
+
+    except Exception as e:
+        logger.error("CRASH EN CALLBACK: %s - %s", type(e).__name__, e, exc_info=True)
+        try:
+            await update.callback_query.edit_message_text("Error al procesar. Intenta de nuevo.")
+        except Exception:
+            pass
 
 
 # ── Handlers exportables ──────────────────────────────────

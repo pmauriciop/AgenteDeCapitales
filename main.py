@@ -23,13 +23,25 @@ def setup_logging() -> None:
     """Configura el sistema de logging."""
     level = getattr(logging, LOG_LEVEL.upper(), logging.INFO)
     fmt = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
-    logging.basicConfig(
-        level=level,
-        format=fmt,
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-        ],
-    )
+    formatter = logging.Formatter(fmt)
+
+    # Handler a archivo (siempre funciona, sin problemas de encoding)
+    file_handler = logging.FileHandler("bot.log", encoding="utf-8", mode="a")
+    file_handler.setFormatter(formatter)
+
+    # Handler a consola — usamos reconfigure si está disponible (Python 3.7+)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except AttributeError:
+        pass
+
+    root = logging.getLogger()
+    root.setLevel(level)
+    root.addHandler(file_handler)
+    root.addHandler(console_handler)
+
     # Reducir verbosidad de librerías externas
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("telegram").setLevel(logging.WARNING)
@@ -44,10 +56,14 @@ def main() -> None:
     app = create_app()
 
     logger.info("✅ Bot en línea. Escuchando mensajes...")
-    app.run_polling(
-        drop_pending_updates=True,
-        allowed_updates=["message", "callback_query", "edited_message"],
-    )
+    try:
+        app.run_polling(
+            drop_pending_updates=True,
+            allowed_updates=["message", "callback_query", "edited_message"],
+        )
+    except Exception as e:
+        logger.critical("💥 Bot detenido por excepción inesperada: %s", e, exc_info=True)
+        raise
 
 
 if __name__ == "__main__":

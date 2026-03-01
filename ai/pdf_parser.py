@@ -278,14 +278,15 @@ def extract_upcoming_installments(content: dict) -> dict[str, float]:
 
 async def parse_pdf_transactions(
     pdf_path: str | Path,
+    content: dict | None = None,
 ) -> list[dict[str, Any]]:
     """
     Analiza un PDF financiero y extrae todas las transacciones.
-    Combina extracción estructurada (Python) + categorización (Groq).
-    Los campos installment_* indican datos de cuotas cuando aplica.
+    Acepta `content` ya extraído para evitar doble lectura del PDF.
     """
     today = date.today().isoformat()
-    content = extract_full_content(pdf_path)
+    if content is None:
+        content = extract_full_content(pdf_path)
     full_text = content["text"]
 
     if not full_text.strip():
@@ -421,11 +422,13 @@ Si no hay transacciones: []"""
         return []
 
 
-async def summarize_pdf_statement(pdf_path: str | Path) -> str:
+async def summarize_pdf_statement(pdf_path: str | Path, content: dict | None = None) -> str:
     """
     Genera un resumen inteligente incluyendo cuotas pendientes detectadas.
+    Acepta `content` ya extraído para evitar doble lectura del PDF.
     """
-    content = extract_full_content(pdf_path)
+    if content is None:
+        content = extract_full_content(pdf_path)
     full_text = content["text"]
 
     if not full_text.strip():

@@ -30,10 +30,13 @@ logger = logging.getLogger(__name__)
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Captura cualquier excepción no manejada y responde al usuario sin caerse."""
     logger.error("Excepción no manejada:", exc_info=context.error)
-    if isinstance(update, Update) and update.effective_message:
-        await update.effective_message.reply_text(
-            "⚠️ Ocurrió un error inesperado. Por favor intentá de nuevo."
-        )
+    try:
+        if isinstance(update, Update) and update.effective_message:
+            await update.effective_message.reply_text(
+                "⚠️ Ocurrió un error inesperado. Por favor intentá de nuevo."
+            )
+    except Exception:
+        pass
 
 
 def create_app() -> Application:
