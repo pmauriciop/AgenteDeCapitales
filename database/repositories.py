@@ -77,7 +77,39 @@ class TransactionRepo:
         return Transaction.from_dict(_decrypt_tx(result.data[0]))
 
     @classmethod
-    def list_by_month(cls, user_id: str, month: str) -> list[Transaction]:
+    def find_duplicate(
+        cls,
+        user_id: str,
+        tx_date: "date",
+        amount: float,
+        description: str,
+        tx_type: str,
+    ) -> Optional[Transaction]:
+        """
+        Busca una transacción existente con el mismo user, fecha, monto y tipo.
+        Compara descripción desencriptando los registros existentes.
+        Retorna la Transaction si existe, None si no.
+        """
+        db = get_client()
+        result = (
+            db.table(cls.TABLE)
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("date", tx_date.isoformat())
+            .eq("amount", amount)
+            .eq("type", tx_type)
+            .execute()
+        )
+        for row in result.data:
+            try:
+                existing_desc = decrypt(row["description"])
+            except Exception:
+                existing_desc = row["description"]
+            if existing_desc == description:
+                return Transaction.from_dict(_decrypt_tx(row))
+        return None
+
+
         """
         month: "YYYY-MM"
         """

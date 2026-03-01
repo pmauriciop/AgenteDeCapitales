@@ -203,17 +203,23 @@ async def handle_pdf_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
             logger.info("Usuario OK: %s", db_user.id)
 
             saved_count = 0
+            skipped_count = 0
             errors = 0
             for tx_data in transactions:
                 try:
-                    TransactionService.add_from_parsed(db_user.id, tx_data)
-                    saved_count += 1
+                    _, created = TransactionService.add_from_parsed(db_user.id, tx_data)
+                    if created:
+                        saved_count += 1
+                    else:
+                        skipped_count += 1
                 except Exception as e:
                     logger.error("Error guardando TX del PDF: %s - %s", type(e).__name__, e, exc_info=True)
                     errors += 1
 
-            logger.info("Guardado: %d OK, %d errores", saved_count, errors)
-            msg = f"Importacion completada\n\nGuardadas: {saved_count}"
+            logger.info("Guardado: %d nuevas, %d duplicadas, %d errores", saved_count, skipped_count, errors)
+            msg = f"Importacion completada\n\nNuevas: {saved_count}"
+            if skipped_count:
+                msg += f"\nYa existian: {skipped_count}"
             if errors:
                 msg += f"\nErrores: {errors}"
 

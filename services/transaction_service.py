@@ -19,17 +19,28 @@ class TransactionService:
     # ── Creación ──────────────────────────────────────────
 
     @classmethod
-    def add_from_parsed(cls, user_id: str, parsed: dict[str, Any]) -> Transaction:
+    def add_from_parsed(cls, user_id: str, parsed: dict[str, Any]) -> tuple[Transaction, bool]:
         """
         Crea una transacción a partir del dict retornado por el NLP.
+        Ignora duplicados (mismo user, fecha, monto, tipo y descripción).
 
         Args:
             user_id: UUID del usuario en Supabase.
             parsed:  dict con amount, type, category, description, date.
 
         Returns:
-            Transaction persistida en DB.
+            Tupla (Transaction, created) donde created=False si era duplicado.
         """
+        existing = TransactionRepo.find_duplicate(
+            user_id=user_id,
+            tx_date=date.fromisoformat(parsed["date"]),
+            amount=float(parsed["amount"]),
+            description=parsed.get("description", ""),
+            tx_type=parsed["type"],
+        )
+        if existing:
+            return existing, False
+
         tx = Transaction(
             user_id=user_id,
             amount=float(parsed["amount"]),
@@ -41,7 +52,7 @@ class TransactionService:
             installment_total=parsed.get("installment_total"),
             installments_remaining=parsed.get("installments_remaining"),
         )
-        return TransactionRepo.create(tx)
+        return TransactionRepo.create(tx), True
 
     @classmethod
     def add_manual(
