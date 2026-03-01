@@ -10,6 +10,8 @@ Estrategia en dos pasos:
      - Extrae "cuotas a vencer" del pie del resumen
   2. Enriquecimiento con LLM (Groq):
      - Categoriza y normaliza. Fallback total para bancos no reconocidos.
+     - El texto enviado al LLM pasa por _sanitize_pdf_text() que elimina
+       nombre del titular, domicilio, número de tarjeta y CUIT/CUIL.
 
 Formatos soportados con detección de cuotas:
   - Visa / Mastercard Banco Galicia
@@ -37,6 +39,73 @@ logger = logging.getLogger(__name__)
 _client = AsyncGroq(api_key=GROQ_API_KEY)
 
 MAX_TEXT_CHARS = 12000
+
+# ── Patrones de datos sensibles a eliminar antes de enviar al LLM ──────────
+
+# Número de tarjeta: 16 dígitos seguidos o grupos "XXXX XXXX XXXX XXXX"
+_RE_CARD_NUMBER = re.compile(
+    r"\b(?:\d[ -]?){15}\d\b"                    # 16 dígitos juntos o con separadores
+    r"|\b\d{4}[\s\-]\d{4}[\s\-]\d{4}[\s\-]\d{4}\b"  # grupos de 4
+)
+# Últimos 4 dígitos de tarjeta con etiqueta (ej: "Tarjeta XXXX 1234")
+_RE_CARD_PARTIAL = re.compile(
+    r"(?i)(tarjeta|nro\.?\s*tarjeta|card\s*n[°º]?\.?)[:\s#]*\d{4,}"
+)
+# CUIT / CUIL: XX-XXXXXXXX-X
+_RE_CUIT = re.compile(r"\b\d{2}-\d{8}-\d\b")
+# CBU / CVU: 22 dígitos
+_RE_CBU = re.compile(r"\b\d{22}\b")
+# Alias CBU (palabras con puntos, ej: "juan.perez.galicia")
+_RE_ALIAS = re.compile(r"(?i)\balias[:\s]+[\w.]+")
+# Correo electrónico
+_RE_EMAIL = re.compile(r"\b[\w.+-]+@[\w.-]+\.\w{2,}\b")
+# Líneas con nombre del titular (patrones típicos de resúmenes argentinos)
+_RE_TITULAR_LINE = re.compile(
+    r"(?i)^.*\b(titular|cliente|sr\.?|sra\.?|nombre)\b.*:\s*.+$",
+    re.MULTILINE,
+)
+# Domicilio (líneas que empiezan con calles típicas)
+_RE_DOMICILIO_LINE = re.compile(
+    r"(?i)^.*\b(domicilio|direcci[oó]n|calle|av\.?|avda\.?|bv\.?)\b.{0,60}$",
+    re.MULTILINE,
+)
+# DNI inline
+_RE_DNI = re.compile(r"(?i)\b(dni|d\.n\.i\.?)[:\s#]*\d{7,8}\b")
+
+
+def _sanitize_pdf_text(text: str) -> str:
+    """
+    Elimina datos personales identificables del texto de un PDF bancario
+    antes de enviarlo al LLM externo.
+
+    Quita:
+    - Números de tarjeta completos y parciales
+    - CUIT / CUIL
+    - CBU / CVU (22 dígitos)
+    - Alias de CBU
+    - Correos electrónicos
+    - Líneas con nombre del titular / domicilio
+    - DNI inline
+
+    Conserva:
+    - Fechas, montos, descripciones de comercios
+    - Secciones de movimientos (DETALLE DEL CONSUMO, etc.)
+    - Totales y cuotas a vencer
+    """
+    # Eliminar líneas completas con titular o domicilio
+    text = _RE_TITULAR_LINE.sub("[DATOS PERSONALES ELIMINADOS]", text)
+    text = _RE_DOMICILIO_LINE.sub("[DOMICILIO ELIMINADO]", text)
+
+    # Sustituciones inline
+    text = _RE_CARD_NUMBER.sub("[TARJETA ELIMINADA]", text)
+    text = _RE_CARD_PARTIAL.sub(r"\1: [TARJETA ELIMINADA]", text)
+    text = _RE_CUIT.sub("[CUIT ELIMINADO]", text)
+    text = _RE_CBU.sub("[CBU ELIMINADO]", text)
+    text = _RE_ALIAS.sub("alias: [ALIAS ELIMINADO]", text)
+    text = _RE_EMAIL.sub("[EMAIL ELIMINADO]", text)
+    text = _RE_DNI.sub(r"\1: [DNI ELIMINADO]", text)
+
+    return text
 
 
 def extract_full_content(pdf_path: str | Path) -> dict[str, Any]:
@@ -371,8 +440,12 @@ Responde UNICAMENTE con JSON array:
 
 async def _llm_only_parse(raw_text: str, today: str) -> list[dict[str, Any]]:
     """Fallback completo por LLM para formatos bancarios no reconocidos."""
-    if len(raw_text) > MAX_TEXT_CHARS:
-        raw_text = raw_text[:MAX_TEXT_CHARS] + "\n[... truncado ...]"
+    # Sanitizar antes de enviar al LLM externo
+    sanitized = _sanitize_pdf_text(raw_text)
+    logger.info("PDF sanitizado para LLM: %d -> %d chars", len(raw_text), len(sanitized))
+
+    if len(sanitized) > MAX_TEXT_CHARS:
+        sanitized = sanitized[:MAX_TEXT_CHARS] + "\n[... truncado ...]"
 
     system_prompt = f"""Eres un experto en documentos bancarios argentinos. Hoy es {today}.
 
@@ -391,7 +464,7 @@ Si no hay transacciones: []"""
         model=GROQ_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Documento:\n\n{raw_text}"},
+            {"role": "user", "content": f"Documento:\n\n{sanitized}"},
         ],
         temperature=0,
         max_tokens=2500,
@@ -434,13 +507,16 @@ async def summarize_pdf_statement(pdf_path: str | Path, content: dict | None = N
     if not full_text.strip():
         return "No se pudo extraer texto del PDF."
 
+    # Sanitizar antes de enviar al LLM externo
+    sanitized = _sanitize_pdf_text(full_text)
+
     upcoming = extract_upcoming_installments(content)
     upcoming_info = ""
     if upcoming:
         parts = [f"{m}: ${a:,.0f}" for m, a in upcoming.items()]
         upcoming_info = f"\n\nCuotas a vencer detectadas: {', '.join(parts)}"
 
-    text_for_llm = full_text[:MAX_TEXT_CHARS] + upcoming_info
+    text_for_llm = sanitized[:MAX_TEXT_CHARS] + upcoming_info
 
     response = await _client.chat.completions.create(
         model=GROQ_MODEL,
