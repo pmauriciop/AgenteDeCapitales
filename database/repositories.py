@@ -109,7 +109,8 @@ class TransactionRepo:
                 return Transaction.from_dict(_decrypt_tx(row))
         return None
 
-
+    @classmethod
+    def list_by_month(cls, user_id: str, month: str) -> list[Transaction]:
         """
         month: "YYYY-MM"
         """
