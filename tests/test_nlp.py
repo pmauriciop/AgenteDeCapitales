@@ -2,15 +2,22 @@
 tests/test_nlp.py
 ──────────────────
 Tests unitarios para ai/nlp.py
-Se mockea la API de OpenAI para no hacer llamadas reales.
+Se mockea el cliente Groq para no hacer llamadas reales.
+
+Nota: ai/nlp.py se importa directamente (no via ai/__init__)
+porque el __init__ no hace imports eager para no romper mocks.
 """
 
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
+# Importar el módulo al nivel del archivo para que esté en sys.modules
+# antes de que @patch intente resolverlo.
+import ai.nlp  # noqa: F401  (necesario para que @patch("ai.nlp._client") funcione)
 
-def _make_openai_response(content: str):
-    """Crea un mock de respuesta de OpenAI."""
+
+def _make_groq_response(content: str):
+    """Crea un mock de respuesta de Groq compatible con la estructura real."""
     choice = MagicMock()
     choice.message.content = content
     response = MagicMock()
@@ -24,7 +31,7 @@ class TestParseTransaction:
     async def test_parse_expense(self, mock_client):
         """Parsea correctamente un gasto."""
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_openai_response(
+            return_value=_make_groq_response(
                 '{"amount": 500.0, "type": "expense", "category": "alimentación", '
                 '"description": "supermercado", "date": "2026-02-21"}'
             )
@@ -43,7 +50,7 @@ class TestParseTransaction:
     async def test_parse_income(self, mock_client):
         """Parsea correctamente un ingreso."""
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_openai_response(
+            return_value=_make_groq_response(
                 '{"amount": 150000.0, "type": "income", "category": "salario", '
                 '"description": "sueldo mensual", "date": "2026-02-21"}'
             )
@@ -61,7 +68,7 @@ class TestParseTransaction:
     async def test_parse_returns_none_for_non_transaction(self, mock_client):
         """Retorna None cuando el mensaje no es una transacción."""
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_openai_response("null")
+            return_value=_make_groq_response("null")
         )
 
         from ai.nlp import parse_transaction
@@ -73,7 +80,7 @@ class TestParseTransaction:
     async def test_parse_normalizes_negative_amount(self, mock_client):
         """El monto siempre debe ser positivo."""
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_openai_response(
+            return_value=_make_groq_response(
                 '{"amount": -200.0, "type": "expense", "category": "transporte", '
                 '"description": "colectivo", "date": "2026-02-21"}'
             )
@@ -88,7 +95,7 @@ class TestParseTransaction:
     async def test_parse_handles_invalid_json(self, mock_client):
         """Retorna None si el modelo devuelve JSON inválido."""
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_openai_response("esto no es json válido")
+            return_value=_make_groq_response("esto no es json válido")
         )
 
         from ai.nlp import parse_transaction
@@ -101,7 +108,7 @@ class TestClassifyIntent:
     @patch("ai.nlp._client")
     async def test_classify_expense_intent(self, mock_client):
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_openai_response("add_expense")
+            return_value=_make_groq_response("add_expense")
         )
 
         from ai.nlp import classify_intent
@@ -113,7 +120,7 @@ class TestClassifyIntent:
     async def test_classify_unknown_fallback(self, mock_client):
         """Intenciones no reconocidas caen en 'unknown'."""
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_openai_response("algo_que_no_existe")
+            return_value=_make_groq_response("algo_que_no_existe")
         )
 
         from ai.nlp import classify_intent
@@ -124,7 +131,7 @@ class TestClassifyIntent:
     @patch("ai.nlp._client")
     async def test_classify_get_summary(self, mock_client):
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_openai_response("get_summary")
+            return_value=_make_groq_response("get_summary")
         )
 
         from ai.nlp import classify_intent

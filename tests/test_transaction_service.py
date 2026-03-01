@@ -73,6 +73,7 @@ class TestTransactionServiceLogic:
     def test_add_from_parsed(self, mock_repo):
         mock_tx = _make_tx()
         mock_repo.create.return_value = mock_tx
+        mock_repo.find_duplicate.return_value = None  # no hay duplicado
 
         parsed = {
             "amount": 1000.0,
@@ -81,9 +82,28 @@ class TestTransactionServiceLogic:
             "description": "supermercado",
             "date": "2026-02-15",
         }
-        result = TransactionService.add_from_parsed("user-uuid", parsed)
-        assert result.amount == 1000.0
+        tx, created = TransactionService.add_from_parsed("user-uuid", parsed)
+        assert created is True
+        assert tx.amount == 1000.0
         mock_repo.create.assert_called_once()
+
+    @patch("services.transaction_service.TransactionRepo")
+    def test_add_from_parsed_duplicate(self, mock_repo):
+        """Si ya existe, retorna el existente con created=False."""
+        existing = _make_tx()
+        mock_repo.find_duplicate.return_value = existing
+
+        parsed = {
+            "amount": 1000.0,
+            "type": "expense",
+            "category": "alimentación",
+            "description": "supermercado",
+            "date": "2026-02-15",
+        }
+        tx, created = TransactionService.add_from_parsed("user-uuid", parsed)
+        assert created is False
+        assert tx.amount == 1000.0
+        mock_repo.create.assert_not_called()
 
     @patch("services.transaction_service.TransactionRepo")
     def test_get_monthly_summary(self, mock_repo):

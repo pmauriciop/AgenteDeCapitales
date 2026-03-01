@@ -104,7 +104,7 @@ class TestProcessDue:
     @patch("services.recurring_service.TransactionRepo")
     def test_skips_future_transactions(self, mock_tx_repo, mock_rec_repo):
         """Transacciones futuras no deben procesarse."""
-        rec = _make_rec(next_date=date(2026, 3, 1))  # en el futuro
+        rec = _make_rec(next_date=date(2026, 12, 31))  # claramente en el futuro
         mock_rec_repo.list_active.return_value = [rec]
 
         result = RecurringService.process_due("user-uuid")
