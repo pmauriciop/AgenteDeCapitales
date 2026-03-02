@@ -6,12 +6,13 @@ Handler para generación y envío del reporte PDF mensual.
 
 import os
 from datetime import date
-from telegram import Update
-from telegram.ext import ContextTypes, CommandHandler
 
+from telegram import Update
+from telegram.ext import CommandHandler, ContextTypes
+
+from bot.keyboards import main_menu
 from database.repositories import UserRepo
 from reports.pdf_generator import generate_monthly_report
-from bot.keyboards import month_selector_keyboard, main_menu
 
 
 async def send_report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

@@ -4,9 +4,10 @@ tests/test_recurring_service.py
 Tests unitarios para services/recurring_service.py
 """
 
-import pytest
 from datetime import date
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from database.models import RecurringTransaction
 from services.recurring_service import RecurringService

@@ -12,13 +12,13 @@ Uso:
 """
 
 from __future__ import annotations
-from datetime import date, datetime
+
+from datetime import date
 from typing import Optional
 
 from database.client import get_client
-from database.models import User, Transaction, Budget, RecurringTransaction
-from database.encryption import encrypt, decrypt
-
+from database.encryption import decrypt, encrypt
+from database.models import Budget, RecurringTransaction, Transaction, User
 
 # ─────────────────────────────────────────────
 #  UserRepo
@@ -168,6 +168,7 @@ class TransactionRepo:
     def list_last_n_months(cls, user_id: str, n: int = 6) -> list[Transaction]:
         """Retorna todas las transacciones de los últimos N meses."""
         from datetime import date
+
         from dateutil.relativedelta import relativedelta
         today = date.today()
         start = (today - relativedelta(months=n)).replace(day=1)

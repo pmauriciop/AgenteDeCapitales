@@ -12,8 +12,8 @@ Uso:
 """
 
 from cryptography.fernet import Fernet
-from config import ENCRYPTION_KEY
 
+from config import ENCRYPTION_KEY
 
 # Instancia única del motor de cifrado
 _fernet = Fernet(ENCRYPTION_KEY.encode())

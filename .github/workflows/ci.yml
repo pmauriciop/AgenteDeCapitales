@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests + Lint + Cobertura
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Lint con ruff
+        run: ruff check . --output-format=github
+
+      - name: Tests + cobertura
+        env:
+          TELEGRAM_BOT_TOKEN: "1234567890:AAFakeTokenForCI"
+          OPENAI_API_KEY: "sk-fake-for-ci"
+          OPENAI_MODEL: "gpt-4o-mini"
+          GROQ_API_KEY: "gsk_fake_for_ci"
+          GROQ_MODEL: "llama-3.3-70b-versatile"
+          SUPABASE_URL: "https://fake.supabase.co"
+          SUPABASE_KEY: "fake-supabase-key"
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY_CI }}
+          ENV: "test"
+          LOG_LEVEL: "WARNING"
+        run: |
+          pytest tests/ \
+            --cov=ai \
+            --cov=services \
+            --cov=database \
+            --cov=dashboard_api \
+            --cov-report=term-missing \
+            --cov-fail-under=70 \
+            -q
+
+      - name: Publicar resumen de cobertura
+        if: always()
+        run: |
+          pytest tests/ \
+            --cov=ai \
+            --cov=services \
+            --cov=database \
+            --cov=dashboard_api \
+            --cov-report=json \
+            -q --no-header 2>/dev/null || true
+          python -c "
+          import json, sys
+          try:
+              data = json.load(open('coverage.json'))
+              pct = data['totals']['percent_covered']
+              print(f'### Cobertura total: {pct:.1f}%')
+              lines = ['| Módulo | Cobertura |', '|--------|-----------|']
+              for f, info in data['files'].items():
+                  pct_f = info['summary']['percent_covered']
+                  lines.append(f'| \`{f}\` | {pct_f:.0f}% |')
+              print('\n'.join(lines))
+          except Exception as e:
+              print(f'No se pudo generar el resumen: {e}')
+          " >> \$GITHUB_STEP_SUMMARY 2>/dev/null || true

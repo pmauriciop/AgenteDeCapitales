@@ -6,6 +6,7 @@ Permite definir límites por categoría y consultar el estado de gasto.
 """
 
 from __future__ import annotations
+
 from datetime import date
 
 from database.models import Budget

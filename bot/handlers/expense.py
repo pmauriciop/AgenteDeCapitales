@@ -5,27 +5,28 @@ ConversationHandler para registro manual de gastos paso a paso.
 Flujo: monto → categoría → descripción → confirmar
 """
 
-from datetime import date
 import warnings
+from datetime import date
+
 warnings.filterwarnings("ignore", message=".*per_message.*", category=UserWarning)
 from telegram import Update
 from telegram.ext import (
+    CallbackQueryHandler,
+    CommandHandler,
     ContextTypes,
     ConversationHandler,
-    CommandHandler,
     MessageHandler,
-    CallbackQueryHandler,
     filters,
 )
 
-from database.repositories import UserRepo
-from services.transaction_service import TransactionService
 from bot.keyboards import expense_categories_keyboard, main_menu
 from bot.states import (
     EXPENSE_AMOUNT,
     EXPENSE_CATEGORY,
     EXPENSE_DESCRIPTION,
 )
+from database.repositories import UserRepo
+from services.transaction_service import TransactionService
 
 
 async def start_expense(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:

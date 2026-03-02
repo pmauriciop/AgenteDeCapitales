@@ -12,12 +12,11 @@ from telegram import Update
 from telegram.ext import ContextTypes, MessageHandler, filters
 
 from ai.nlp import classify_intent, parse_transaction
-from database.repositories import UserRepo, TransactionRepo
-from database.models import Transaction
-from services.transaction_service import TransactionService
-from services.budget_service import BudgetService
+from bot.keyboards import confirm_transaction_keyboard, main_menu
+from database.repositories import UserRepo
 from services.analyst_service import AnalystService
-from bot.keyboards import main_menu, confirm_transaction_keyboard
+from services.budget_service import BudgetService
+from services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
 
@@ -220,9 +219,9 @@ async def _request_report(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         "📄 Generando tu reporte PDF… ⏳",
         parse_mode="Markdown",
     )
-    from reports.pdf_generator import generate_monthly_report
-    from telegram import InputFile
     import os
+
+    from reports.pdf_generator import generate_monthly_report
 
     db_user, _ = UserRepo.get_or_create(
         telegram_id=update.effective_user.id,

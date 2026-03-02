@@ -6,14 +6,15 @@ Soporta navegación entre meses con botones inline.
 """
 
 from datetime import date
-from telegram import Update
-from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 
-from database.repositories import UserRepo
-from services.transaction_service import TransactionService
-from services.budget_service import BudgetService
+from telegram import Update
+from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
+
 from ai.nlp import generate_financial_advice
 from bot.keyboards import month_selector_keyboard
+from database.repositories import UserRepo
+from services.budget_service import BudgetService
+from services.transaction_service import TransactionService
 
 
 async def show_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

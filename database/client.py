@@ -11,8 +11,8 @@ Uso:
     result = db.table("users").select("*").execute()
 """
 
-from supabase import create_client, Client
-from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
+from config import SUPABASE_SERVICE_KEY, SUPABASE_URL
+from supabase import Client, create_client
 
 _client: Client | None = None
 

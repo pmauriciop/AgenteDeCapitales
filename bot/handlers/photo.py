@@ -14,10 +14,10 @@ from telegram import Update
 from telegram.ext import ContextTypes, MessageHandler, filters
 
 from ai.ocr import parse_receipt
-from database.repositories import UserRepo
-from services.transaction_service import TransactionService
-from services.budget_service import BudgetService
 from bot.keyboards import confirm_transaction_keyboard, main_menu
+from database.repositories import UserRepo
+from services.budget_service import BudgetService
+from services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
 

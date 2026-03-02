@@ -12,6 +12,7 @@ from datetime import date
 from typing import Any
 
 from groq import AsyncGroq
+
 from config import GROQ_API_KEY, GROQ_MODEL
 
 _client = AsyncGroq(api_key=GROQ_API_KEY)

@@ -4,14 +4,16 @@ tests/test_encryption.py
 Tests unitarios para database/encryption.py
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 # Mockeamos ENCRYPTION_KEY antes de importar el módulo
 FAKE_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 # Generamos una clave Fernet válida para los tests
 from cryptography.fernet import Fernet
+
 VALID_KEY = Fernet.generate_key().decode()
 
 
@@ -21,6 +23,7 @@ def patch_config(monkeypatch):
     monkeypatch.setenv("ENCRYPTION_KEY", VALID_KEY)
     # Re-importar para que tome la nueva clave
     import importlib
+
     import database.encryption as enc_module
     enc_module._fernet = Fernet(VALID_KEY.encode())
     return enc_module
@@ -34,7 +37,7 @@ def test_encrypt_returns_string():
 
 
 def test_decrypt_roundtrip():
-    from database.encryption import encrypt, decrypt
+    from database.encryption import decrypt, encrypt
     original = "dato sensible: $1.500"
     encrypted = encrypt(original)
     decrypted = decrypt(encrypted)
@@ -61,7 +64,8 @@ def test_decrypt_requires_string():
 
 
 def test_decrypt_invalid_token():
-    from database.encryption import decrypt
     from cryptography.fernet import InvalidToken
+
+    from database.encryption import decrypt
     with pytest.raises(InvalidToken):
         decrypt("token_invalido_total")

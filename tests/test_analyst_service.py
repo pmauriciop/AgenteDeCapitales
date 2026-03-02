@@ -18,8 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from database.models import Transaction, RecurringTransaction, Budget
-
+from database.models import Budget, RecurringTransaction, Transaction
 
 # ─────────────────────────────────────────────
 #  Helpers

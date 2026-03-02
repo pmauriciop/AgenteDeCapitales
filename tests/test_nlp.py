@@ -8,8 +8,9 @@ Nota: ai/nlp.py se importa directamente (no via ai/__init__)
 porque el __init__ no hace imports eager para no romper mocks.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 # Importar el módulo al nivel del archivo para que esté en sys.modules
 # antes de que @patch intente resolverlo.

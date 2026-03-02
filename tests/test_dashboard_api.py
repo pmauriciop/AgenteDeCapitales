@@ -16,7 +16,6 @@ from fastapi.testclient import TestClient
 
 from database.encryption import encrypt
 
-
 # ─────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────

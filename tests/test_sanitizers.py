@@ -4,9 +4,10 @@ tests/test_sanitizers.py
 Tests unitarios para las funciones de sanitización de datos sensibles.
 No requieren conexión a APIs externas.
 """
+import os
 import re
 import sys
-import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # Importar los patrones directamente sin cargar el módulo completo

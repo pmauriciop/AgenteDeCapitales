@@ -7,12 +7,13 @@ procesa automáticamente cuando llega su fecha.
 """
 
 from __future__ import annotations
+
 from datetime import date, timedelta
+
 from dateutil.relativedelta import relativedelta
 
-from database.models import RecurringTransaction
+from database.models import RecurringTransaction, Transaction
 from database.repositories import RecurringRepo, TransactionRepo
-from database.models import Transaction
 
 
 class RecurringService:

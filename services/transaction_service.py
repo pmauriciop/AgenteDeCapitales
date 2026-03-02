@@ -6,11 +6,12 @@ Orquesta NLP → validación → persistencia en DB.
 """
 
 from __future__ import annotations
+
 from datetime import date
 from typing import Any
 
 from database.models import Transaction
-from database.repositories import TransactionRepo, UserRepo
+from database.repositories import TransactionRepo
 
 
 class TransactionService:

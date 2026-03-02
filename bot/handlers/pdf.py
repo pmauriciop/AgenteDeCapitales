@@ -17,15 +17,14 @@ import logging
 import os
 import tempfile
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.error import RetryAfter
-from telegram.ext import ContextTypes, MessageHandler, CallbackQueryHandler, filters
-from telegram.helpers import escape_markdown
+from telegram.ext import CallbackQueryHandler, ContextTypes, MessageHandler, filters
 
-from ai.pdf_parser import parse_pdf_transactions, summarize_pdf_statement, extract_full_content
+from ai.pdf_parser import extract_full_content, parse_pdf_transactions, summarize_pdf_statement
+from bot.keyboards import main_menu
 from database.repositories import UserRepo
 from services.transaction_service import TransactionService
-from bot.keyboards import main_menu
 
 logger = logging.getLogger(__name__)
 

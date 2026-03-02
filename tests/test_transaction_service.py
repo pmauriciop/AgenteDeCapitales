@@ -5,9 +5,10 @@ Tests unitarios para services/transaction_service.py
 Usa mocks para no depender de Supabase.
 """
 
-import pytest
 from datetime import date
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from database.models import Transaction
 from services.transaction_service import TransactionService

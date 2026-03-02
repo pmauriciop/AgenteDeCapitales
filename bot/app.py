@@ -6,23 +6,23 @@ Registra todos los handlers en el orden correcto.
 """
 
 import logging
-import traceback
+
 from telegram import Update
 from telegram.ext import Application, ContextTypes
 
-from config import TELEGRAM_BOT_TOKEN
-from bot.handlers.start import start_handler, help_handler
-from bot.handlers.messages import message_handler
-from bot.handlers.voice import voice_handler
-from bot.handlers.photo import photo_handler
-from bot.handlers.pdf import pdf_handler, pdf_callback_handler
+from bot.handlers.budget import budget_callback, budget_conversation
+from bot.handlers.callbacks import generic_callback_handler
 from bot.handlers.expense import expense_conversation
 from bot.handlers.income import income_conversation
-from bot.handlers.summary import summary_handler, summary_callback
-from bot.handlers.budget import budget_conversation, budget_callback
-from bot.handlers.recurring import recurring_conversation, recurring_callback
+from bot.handlers.messages import message_handler
+from bot.handlers.pdf import pdf_callback_handler, pdf_handler
+from bot.handlers.photo import photo_handler
+from bot.handlers.recurring import recurring_callback, recurring_conversation
 from bot.handlers.report import report_handler
-from bot.handlers.callbacks import generic_callback_handler
+from bot.handlers.start import help_handler, start_handler
+from bot.handlers.summary import summary_callback, summary_handler
+from bot.handlers.voice import voice_handler
+from config import TELEGRAM_BOT_TOKEN
 
 logger = logging.getLogger(__name__)
 

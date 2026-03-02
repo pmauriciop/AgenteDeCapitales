@@ -12,8 +12,9 @@ import logging
 import logging.handlers
 import sys
 import warnings
-from config import LOG_LEVEL, ENV
+
 from bot.app import create_app
+from config import ENV, LOG_LEVEL
 
 # Suprimir PTBUserWarning de ConversationHandler (comportamiento esperado para
 # handlers mixtos MessageHandler + CallbackQueryHandler)

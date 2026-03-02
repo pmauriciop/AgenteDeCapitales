@@ -6,15 +6,15 @@ y lo pasa al analista de IA para responder preguntas.
 """
 
 from __future__ import annotations
+
 from datetime import date
 
-from database.repositories import (
-    UserRepo,
-    TransactionRepo,
-    RecurringRepo,
-    BudgetRepo,
-)
 from ai.analyst import answer_financial_question, detect_analyst_intent
+from database.repositories import (
+    BudgetRepo,
+    RecurringRepo,
+    TransactionRepo,
+)
 
 
 class AnalystService:

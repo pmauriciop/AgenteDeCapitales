@@ -7,6 +7,7 @@ acceda directamente a os.environ.
 """
 
 import os
+
 from dotenv import load_dotenv
 
 # Carga .env si existe (útil en desarrollo)

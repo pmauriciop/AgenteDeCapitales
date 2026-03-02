@@ -6,11 +6,10 @@ Registra al usuario en la DB la primera vez y muestra el menú principal.
 """
 
 from telegram import Update
-from telegram.ext import ContextTypes, CommandHandler
+from telegram.ext import CommandHandler, ContextTypes
 
-from database.repositories import UserRepo
 from bot.keyboards import main_menu
-
+from database.repositories import UserRepo
 
 WELCOME_TEXT = """👋 ¡Hola, *{name}*! Soy tu *Agente de Capitales*.
 

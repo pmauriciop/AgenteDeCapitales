@@ -32,6 +32,7 @@ from typing import Any
 
 import pdfplumber
 from groq import AsyncGroq
+
 from config import GROQ_API_KEY, GROQ_MODEL
 
 logger = logging.getLogger(__name__)

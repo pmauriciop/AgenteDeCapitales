@@ -5,27 +5,28 @@ ConversationHandler para registro manual de ingresos.
 Flujo: monto → categoría → descripción → guardar
 """
 
-from datetime import date
 import warnings
+from datetime import date
+
 warnings.filterwarnings("ignore", message=".*per_message.*", category=UserWarning)
 from telegram import Update
 from telegram.ext import (
+    CallbackQueryHandler,
+    CommandHandler,
     ContextTypes,
     ConversationHandler,
-    CommandHandler,
     MessageHandler,
-    CallbackQueryHandler,
     filters,
 )
 
-from database.repositories import UserRepo
-from services.transaction_service import TransactionService
 from bot.keyboards import income_categories_keyboard, main_menu
 from bot.states import (
     INCOME_AMOUNT,
     INCOME_CATEGORY,
     INCOME_DESCRIPTION,
 )
+from database.repositories import UserRepo
+from services.transaction_service import TransactionService
 
 
 async def start_income(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:

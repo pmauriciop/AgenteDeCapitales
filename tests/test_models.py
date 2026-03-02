@@ -4,9 +4,11 @@ tests/test_models.py
 Tests unitarios para database/models.py
 """
 
-import pytest
 from datetime import date, datetime
-from database.models import User, Transaction, Budget, RecurringTransaction
+
+import pytest
+
+from database.models import Budget, RecurringTransaction, Transaction, User
 
 
 class TestUser:

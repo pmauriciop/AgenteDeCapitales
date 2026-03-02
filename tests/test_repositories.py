@@ -12,14 +12,17 @@ exactamente la cadena de llamadas que usa el repo real
 from __future__ import annotations
 
 from datetime import date
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
+
 import pytest
 
-from database.models import (
-    User, Transaction, Budget, RecurringTransaction,
-)
 from database.encryption import encrypt
-
+from database.models import (
+    Budget,
+    RecurringTransaction,
+    Transaction,
+    User,
+)
 
 # ─────────────────────────────────────────────
 #  Helpers de fixtures
@@ -219,8 +222,8 @@ class TestUserRepo:
 
 class TestTransactionRepoCreate:
     def test_create_encrypts_description(self):
-        from database.repositories import TransactionRepo
         from database.encryption import decrypt
+        from database.repositories import TransactionRepo
 
         row = _make_tx_row(description="Almuerzo")
         client = _chain_mock([row])
@@ -514,8 +517,8 @@ class TestRecurringRepo:
         assert result is False
 
     def test_create_encrypts_description(self):
-        from database.repositories import RecurringRepo
         from database.encryption import decrypt
+        from database.repositories import RecurringRepo
 
         row = _make_recurring_row(description="Spotify")
         client = _chain_mock([row])

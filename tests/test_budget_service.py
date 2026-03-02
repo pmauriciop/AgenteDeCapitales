@@ -4,8 +4,9 @@ tests/test_budget_service.py
 Tests unitarios para services/budget_service.py
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from services.budget_service import BudgetService
 

@@ -11,9 +11,8 @@ Patrones manejados:
 """
 
 from telegram import Update
-from telegram.ext import ContextTypes, CallbackQueryHandler
+from telegram.ext import CallbackQueryHandler, ContextTypes
 
-from database.repositories import UserRepo
 from services.transaction_service import TransactionService
 
 

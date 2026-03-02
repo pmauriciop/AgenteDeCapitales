@@ -5,10 +5,9 @@ Teclados personalizados de Telegram (InlineKeyboard y ReplyKeyboard).
 Centralizados aquí para reutilización entre handlers.
 """
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
 from ai.nlp import EXPENSE_CATEGORIES, INCOME_CATEGORIES
-
 
 # ─────────────────────────────────────────────
 #  Menú principal

@@ -7,6 +7,7 @@ cualquier módulo del proyecto sea importado.
 """
 
 import os
+
 from cryptography.fernet import Fernet
 
 # ── Generar clave Fernet válida para todos los tests ─────

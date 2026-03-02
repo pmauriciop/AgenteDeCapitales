@@ -16,37 +16,37 @@ Uso:
 """
 
 from __future__ import annotations
-import io
+
 import os
 import tempfile
 from datetime import date
-from pathlib import Path
 from typing import Optional
-
-# ReportLab
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-    Image as RLImage,
-    HRFlowable,
-)
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 # Matplotlib para gráficos
 import matplotlib
+
+# ReportLab
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    HRFlowable,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+from reportlab.platypus import (
+    Image as RLImage,
+)
+
 matplotlib.use("Agg")  # sin GUI
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
-from database.repositories import TransactionRepo, BudgetRepo
-
+from database.repositories import BudgetRepo, TransactionRepo
 
 # ─────────────────────────────────────────────
 #  Paleta de colores
