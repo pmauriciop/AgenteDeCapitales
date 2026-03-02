@@ -9,6 +9,7 @@ Uso:
 """
 
 import logging
+import logging.handlers
 import sys
 import warnings
 from config import LOG_LEVEL, ENV
@@ -20,16 +21,22 @@ warnings.filterwarnings("ignore", category=UserWarning, module="telegram")
 
 
 def setup_logging() -> None:
-    """Configura el sistema de logging."""
+    """Configura el sistema de logging con rotación automática de archivos."""
     level = getattr(logging, LOG_LEVEL.upper(), logging.INFO)
     fmt = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
     formatter = logging.Formatter(fmt)
 
-    # Handler a archivo (siempre funciona, sin problemas de encoding)
-    file_handler = logging.FileHandler("bot.log", encoding="utf-8", mode="a")
+    # Handler a archivo con rotación: máx 5 MB por archivo, mantiene 3 backups
+    # → bot.log, bot.log.1, bot.log.2  (máx ~15 MB en disco)
+    file_handler = logging.handlers.RotatingFileHandler(
+        "bot.log",
+        maxBytes=5 * 1024 * 1024,  # 5 MB
+        backupCount=3,
+        encoding="utf-8",
+    )
     file_handler.setFormatter(formatter)
 
-    # Handler a consola — usamos reconfigure si está disponible (Python 3.7+)
+    # Handler a consola
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
     try:
